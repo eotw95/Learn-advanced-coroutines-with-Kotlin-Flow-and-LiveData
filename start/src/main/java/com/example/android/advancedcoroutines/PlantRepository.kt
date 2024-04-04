@@ -38,7 +38,13 @@ class PlantRepository private constructor(
      * Fetch a list of [Plant]s from the database.
      * Returns a LiveData-wrapped List of Plants.
      */
-    val plants = plantDao.getPlants()
+    val plants: LiveData<List<Plant>> = liveData<List<Plant>> {
+        val plantsLiveData = plantDao.getPalnts()
+        val customSortOrder = plantsSortOrderCache.getOrAwait()
+        emitSource(plantsLiveData.map { plantList ->
+            plantList.applySort(customSortOrder)
+        })
+    }
 
     private var plantsSortOrderCache = CacheOnSuccess(onErrorFallback = { listOf<String>() }) {
         plantService.customPlantsSortOrder()
@@ -48,8 +54,13 @@ class PlantRepository private constructor(
      * Fetch a list of [Plant]s from the database that matches a given [GrowZone].
      * Returns a LiveData-wrapped List of Plants.
      */
-    fun getPlantsWithGrowZone(growZone: GrowZone) =
-        plantDao.getPlantsWithGrowZoneNumber(growZone.number)
+    fun getPlantsWithGrowZone(growZone: GrowZone) = liveData {
+        val plantsGrowZoneliveData = plantDao.getPlantsWithGrowZoneNumber(growZone.number)
+        val customSortOrder = plantsSortOrderCache.getOrAwait()
+        emitSource(plantsGrowZoneliveData.map { plantList ->
+            plantList.applySort(customSortOrder)
+        })
+    }
 
     /**
      * Returns true if we should make a network request.
