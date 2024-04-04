@@ -40,6 +40,10 @@ class PlantRepository private constructor(
      */
     val plants = plantDao.getPlants()
 
+    private var plantsSortOrderCache = CacheOnSuccess(onErrorFallback = { listOf<String>() }) {
+        plantService.customPlantsSortOrder()
+    }
+
     /**
      * Fetch a list of [Plant]s from the database that matches a given [GrowZone].
      * Returns a LiveData-wrapped List of Plants.
@@ -53,6 +57,15 @@ class PlantRepository private constructor(
     private fun shouldUpdatePlantsCache(): Boolean {
         // suspending function, so you can e.g. check the status of the database here
         return true
+    }
+
+    private fun List<plant>.applySort(costomSortorder: List<String>): List<Plant> {
+        return sortedBy { plant ->
+            val positionForItem = costomSortorder.indexOf(plant.plantId).let { order ->
+                if (order > -1) order else Int.MAX_VALUE
+            }
+            ComparablePair(positionForItem, plant.name)
+        }
     }
 
     /**
